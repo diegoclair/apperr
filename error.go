@@ -1,5 +1,7 @@
 package apperr
 
+import "maps"
+
 // Error is a domain error with context (cause, meta).
 // Created when extra information needs to be added to a Definition,
 // via WithMeta, Wrap, or WithMessage.
@@ -31,9 +33,7 @@ func (e *Error) Meta() map[string]any { return e.meta }
 // WithMeta returns a new Error with the metadata added (immutable).
 func (e *Error) WithMeta(key string, value any) *Error {
 	meta := make(map[string]any, len(e.meta)+1)
-	for k, v := range e.meta {
-		meta[k] = v
-	}
+	maps.Copy(meta, e.meta)
 	meta[key] = value
 	return &Error{kind: e.kind, code: e.code, message: e.message, cause: e.cause, meta: meta}
 }
