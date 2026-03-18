@@ -6,15 +6,23 @@ Define errors once as `Definition`s, return them directly from any layer, and le
 
 ## Why?
 
-Common problem in Go backends using Clean Architecture:
+Common problems in Go backends — even with Clean Architecture:
 
 ```go
-// service layer — should NOT know about HTTP
-func (s *userService) GetByID(ctx context.Context, id string) (User, error) {
-    user, err := s.repo.FindByID(ctx, id)
+func (s *userService) Login(ctx context.Context, email, password string) (User, error) {
+    user, err := s.repo.FindByEmail(ctx, email)
     if err != nil {
-        return User{}, resterrors.NewNotFoundError("user not found") // ❌ HTTP in business logic
+        // ❌ HTTP status in business logic (imports net/http)
+        return User{}, echo.NewHTTPError(http.StatusNotFound, "user not found")
     }
+
+    if user.IsBlocked {
+        // ❌ No error code — frontend can't programmatically handle this
+        // ❌ No metadata — frontend can't show "try again in 5 minutes"
+        // ❌ Hardcoded message — can't do i18n
+        return User{}, echo.NewHTTPError(http.StatusForbidden, "account blocked")
+    }
+
     return user, nil
 }
 ```
@@ -22,17 +30,22 @@ func (s *userService) GetByID(ctx context.Context, id string) (User, error) {
 With `apperr`:
 
 ```go
-// service layer — transport-agnostic
-func (s *userService) GetByID(ctx context.Context, id string) (User, error) {
-    user, err := s.repo.FindByID(ctx, id)
+func (s *userService) Login(ctx context.Context, email, password string) (User, error) {
+    user, err := s.repo.FindByEmail(ctx, email)
     if err != nil {
-        return User{}, errcodes.ErrUserNotFound // ✅ domain error, returned directly
+        return User{}, errcodes.ErrUserNotFound       // ✅ transport-agnostic, no net/http
     }
+
+    if user.IsBlocked {
+        return User{}, errcodes.ErrAccountBlocked.     // ✅ error code: "AUTH_ACCOUNT_BLOCKED"
+            WithMeta("retry_after_minutes", 5)          // ✅ structured metadata for the frontend
+    }
+
     return user, nil
 }
 ```
 
-The HTTP layer handles the mapping automatically — your business logic never imports `net/http`.
+The transport layer maps `Kind` to status codes automatically. Your business logic never imports `net/http`, and the frontend gets structured `code` + `meta` for i18n and programmatic handling.
 
 ## Install
 
