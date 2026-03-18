@@ -1,12 +1,28 @@
 # apperr
 
-Transport-agnostic application error handling for Go.
+<p align="center">
+  <b>Transport-agnostic application error handling for Go</b><br>
+  Define errors once, return them directly, and let the transport layer handle the mapping.
+  <br><br>
+  <a href="https://github.com/diegoclair/apperr/tags">
+    <img src="https://img.shields.io/github/tag/diegoclair/apperr.svg" alt="GitHub tag" />
+  </a>
+  <a href="https://pkg.go.dev/github.com/diegoclair/apperr">
+    <img src="https://pkg.go.dev/badge/github.com/diegoclair/apperr.svg" alt="Go Reference" />
+  </a>
+  <a href="https://goreportcard.com/report/github.com/diegoclair/apperr">
+    <img src="https://goreportcard.com/badge/github.com/diegoclair/apperr" alt="Go Report Card" />
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
+  </a>
+</p>
 
-Define errors once as `Definition`s, return them directly from any layer, and let the transport layer (HTTP, gRPC, GraphQL) map them to the appropriate response format.
+## Introduction
 
-## Why?
+### Why
 
-Common problems in Go backends — even with Clean Architecture:
+A common pattern in Go backends — even those following Clean Architecture — is leaking transport concerns into business logic:
 
 ```go
 func (s *userService) Login(ctx context.Context, email, password string) (User, error) {
@@ -27,7 +43,11 @@ func (s *userService) Login(ctx context.Context, email, password string) (User, 
 }
 ```
 
-With `apperr`:
+This couples your service layer to HTTP, makes errors impossible to translate (i18n), and gives the frontend no structured way to handle specific error cases.
+
+### How
+
+With `apperr`, errors are defined once as `Definition`s — transport-agnostic, with a unique `Code` and `Kind`. Return them directly from any layer:
 
 ```go
 func (s *userService) Login(ctx context.Context, email, password string) (User, error) {
@@ -45,7 +65,7 @@ func (s *userService) Login(ctx context.Context, email, password string) (User, 
 }
 ```
 
-The transport layer maps `Kind` to status codes automatically. Your business logic never imports `net/http`, and the frontend gets structured `code` + `meta` for i18n and programmatic handling.
+The transport layer maps `Kind` to the appropriate status code automatically. Your business logic never imports `net/http`, and the frontend gets structured `code` + `meta` for i18n and programmatic handling.
 
 ## Install
 
@@ -53,9 +73,11 @@ The transport layer maps `Kind` to status codes automatically. Your business log
 go get github.com/diegoclair/apperr
 ```
 
-## Quick Start
+## Getting Started
 
 ### 1. Define your errors (once)
+
+Create a package in your project with all error definitions. Each `Definition` has a `Kind` (category), a `Code` (unique identifier for the frontend), and a default message:
 
 ```go
 package errcodes
@@ -70,7 +92,9 @@ var (
 )
 ```
 
-### 2. Return them from your services
+The library also provides [built-in sentinel errors](#built-in-sentinel-errors) for common cases like `ErrNotFound`, `ErrInternal`, `ErrTokenExpired`, etc.
+
+### 2. Return errors from your services
 
 ```go
 // Simple — return the Definition directly (it implements error)
@@ -88,13 +112,15 @@ return errcodes.ErrEmailExists.WithMessage("the email john@example.com is alread
 
 ### 3. Check errors
 
+All helpers use `errors.As` under the hood, so they work with wrapped errors (e.g., `fmt.Errorf("repo: %w", err)`):
+
 ```go
 // By Kind (category)
 if apperr.IsNotFound(err) { ... }
 if apperr.IsValidation(err) { ... }
 if apperr.IsAuthentication(err) { ... }
 
-// By specific error (compares Code)
+// By specific error (compares Code via errors.Is)
 if errors.Is(err, errcodes.ErrAccountBlocked) { ... }
 
 // Extract code
@@ -102,6 +128,8 @@ code := apperr.GetCode(err) // "AUTH_ACCOUNT_BLOCKED"
 ```
 
 ### 4. Map to HTTP (in your transport layer)
+
+The `httpmap` sub-package converts any `AppError` into an HTTP response. Import it only in your transport layer — the core `apperr` package has zero dependency on `net/http`:
 
 ```go
 import "github.com/diegoclair/apperr/httpmap"
@@ -127,6 +155,8 @@ JSON response:
     }
 }
 ```
+
+The frontend uses `code` for i18n translations and programmatic handling, while `meta` carries dynamic data. The `message` field serves as a fallback for logging and debugging.
 
 ## Architecture
 
@@ -160,7 +190,7 @@ httpmap/ (sub-package — maps Kind → HTTP status)
 
 ### Built-in Sentinel Errors
 
-These are generic errors usable in any project. For business-specific errors, define your own with `Define()`.
+Generic errors reusable in any project. For business-specific errors, define your own with `Define()`.
 
 | Sentinel | Kind | Code |
 |----------|------|------|
@@ -198,13 +228,23 @@ Definitions are package-level variables (`var ErrXxx = apperr.Define(...)`). Thi
 
 ### Why no `New()` method?
 
-Definition implements `error` directly. You just `return errcodes.ErrSomething`. Only when you need to add context (meta, cause, custom message) do the methods create an `*Error` instance. Less verbosity, same safety.
+`Definition` implements `error` directly. You just `return errcodes.ErrSomething`. Only when you need to add context (meta, cause, custom message) do the methods create an `*Error` instance. Less verbosity, same safety.
 
 ## Roadmap
 
 - [ ] `grpcmap/` — Kind → gRPC status code mapping
 - [ ] `gqlmap/` — Kind → GraphQL error extensions mapping
 
+## Contributing
+
+Contributions are welcome!
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
+
 ## License
 
-MIT
+[MIT](./LICENSE)
