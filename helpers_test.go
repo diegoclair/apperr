@@ -16,6 +16,10 @@ func TestIsKind(t *testing.T) {
 		{"Definition no match", Define(KindNotFound, "NF", "nf"), KindValidation, false},
 		{"Error match", &Error{kind: KindConflict, code: "C", message: "c"}, KindConflict, true},
 		{"Error no match", &Error{kind: KindConflict, code: "C", message: "c"}, KindInternal, false},
+		{"wrapped Definition", fmt.Errorf("repo: %w", Define(KindNotFound, "NF", "nf")), KindNotFound, true},
+		{"wrapped Error", fmt.Errorf("service: %w", &Error{kind: KindConflict, code: "C", message: "c"}), KindConflict, true},
+		{"wrapped no match", fmt.Errorf("repo: %w", Define(KindNotFound, "NF", "nf")), KindInternal, false},
+		{"double wrapped", fmt.Errorf("handler: %w", fmt.Errorf("service: %w", ErrNotFound)), KindNotFound, true},
 		{"plain error", fmt.Errorf("plain"), KindInternal, false},
 		{"nil error", nil, KindInternal, false},
 	}
@@ -46,6 +50,11 @@ func TestIsHelpers(t *testing.T) {
 		{"IsValidation", ErrValidation, IsValidation, true},
 		{"IsInternal", ErrInternal, IsInternal, true},
 		{"IsRateLimited", ErrRateLimited, IsRateLimited, true},
+
+		// wrapped errors
+		{"IsNotFound wrapped", fmt.Errorf("repo: %w", ErrNotFound), IsNotFound, true},
+		{"IsConflict wrapped", fmt.Errorf("svc: %w", ErrConflict), IsConflict, true},
+		{"IsInternal wrapped", fmt.Errorf("handler: %w", ErrInternal), IsInternal, true},
 	}
 
 	for _, tt := range tests {
@@ -73,6 +82,12 @@ func TestHasCode(t *testing.T) {
 	if HasCode(fmt.Errorf("plain"), "ANY") {
 		t.Error("HasCode should return false for plain errors")
 	}
+
+	// wrapped
+	wrapped := fmt.Errorf("repo: %w", def)
+	if !HasCode(wrapped, "USER_NOT_FOUND") {
+		t.Error("HasCode should match wrapped Definition code")
+	}
 }
 
 func TestGetCode(t *testing.T) {
@@ -83,6 +98,12 @@ func TestGetCode(t *testing.T) {
 	}
 	if got := GetCode(fmt.Errorf("plain")); got != "" {
 		t.Errorf("GetCode() = %v, want empty", got)
+	}
+
+	// wrapped
+	wrapped := fmt.Errorf("repo: %w", def)
+	if got := GetCode(wrapped); got != "USER_NOT_FOUND" {
+		t.Errorf("GetCode(wrapped) = %v, want USER_NOT_FOUND", got)
 	}
 }
 
@@ -112,6 +133,26 @@ func TestAsAppError(t *testing.T) {
 			t.Error("AsAppError should fail for plain error")
 		}
 	})
+
+	t.Run("with wrapped Definition", func(t *testing.T) {
+		wrapped := fmt.Errorf("repo: %w", ErrNotFound)
+		appErr, ok := AsAppError(wrapped)
+		if !ok || appErr == nil {
+			t.Error("AsAppError should succeed for wrapped Definition")
+		}
+		if appErr.Code() != "NOT_FOUND" {
+			t.Errorf("Code() = %v, want NOT_FOUND", appErr.Code())
+		}
+	})
+
+	t.Run("with wrapped Error", func(t *testing.T) {
+		err := ErrNotFound.WithMeta("id", "123")
+		wrapped := fmt.Errorf("repo: %w", err)
+		appErr, ok := AsAppError(wrapped)
+		if !ok || appErr == nil {
+			t.Error("AsAppError should succeed for wrapped Error")
+		}
+	})
 }
 
 func TestGetMeta(t *testing.T) {
@@ -135,6 +176,15 @@ func TestGetMeta(t *testing.T) {
 		meta := GetMeta(fmt.Errorf("plain"))
 		if meta != nil {
 			t.Errorf("GetMeta() = %v, want nil for plain error", meta)
+		}
+	})
+
+	t.Run("from wrapped Error with meta", func(t *testing.T) {
+		err := ErrNotFound.WithMeta("id", "123")
+		wrapped := fmt.Errorf("repo: %w", err)
+		meta := GetMeta(wrapped)
+		if meta["id"] != "123" {
+			t.Errorf("GetMeta(wrapped) = %v, want id=123", meta)
 		}
 	})
 }
