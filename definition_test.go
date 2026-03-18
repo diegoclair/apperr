@@ -28,13 +28,8 @@ func TestDefinition_Accessors(t *testing.T) {
 }
 
 func TestDefinition_DirectReturn(t *testing.T) {
-	def := Define(KindNotFound, "NOT_FOUND", "not found")
-
-	// Definition can be returned as error directly
-	var err error = def
-	if err == nil {
-		t.Error("Definition should be usable as error")
-	}
+	// Definition can be used as error directly (compile-time guarantee via AppError interface)
+	var err error = Define(KindNotFound, "NOT_FOUND", "not found")
 	if err.Error() != "not found" {
 		t.Errorf("Error() = %q, want %q", err.Error(), "not found")
 	}
