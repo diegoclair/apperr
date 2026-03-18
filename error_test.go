@@ -130,8 +130,9 @@ func TestError_Is(t *testing.T) {
 }
 
 func TestError_ImplementsError(t *testing.T) {
+	// Compile-time guarantee via AppError interface check (var _ AppError = (*Error)(nil))
 	var err error = &Error{kind: KindValidation, code: "TEST", message: "test"}
-	if err == nil {
-		t.Error("*Error should implement error interface")
+	if err.Error() != "test" {
+		t.Errorf("Error() = %q, want %q", err.Error(), "test")
 	}
 }
