@@ -4,6 +4,9 @@
   <b>Transport-agnostic application error handling for Go</b><br>
   Define errors once, return them directly, and let the transport layer handle the mapping.
   <br><br>
+  <a href="https://github.com/diegoclair/apperr/actions/workflows/ci.yml">
+    <img src="https://github.com/diegoclair/apperr/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  </a>
   <a href="https://github.com/diegoclair/apperr/tags">
     <img src="https://img.shields.io/github/tag/diegoclair/apperr.svg" alt="GitHub tag" />
   </a>
