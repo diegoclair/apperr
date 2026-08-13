@@ -12,6 +12,7 @@ const (
 	KindAuthorization                   // no permission for the resource
 	KindInternal                        // unexpected system error
 	KindRateLimited                     // rate limit exceeded
+	KindUnavailable                     // a dependency is down or timed out — not our bug, and retryable
 )
 
 // String returns the name of the Kind (useful for logs and debug).
@@ -31,6 +32,8 @@ func (k Kind) String() string {
 		return "internal"
 	case KindRateLimited:
 		return "rate_limited"
+	case KindUnavailable:
+		return "unavailable"
 	default:
 		return "unknown"
 	}

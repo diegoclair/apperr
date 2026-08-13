@@ -31,4 +31,8 @@ var (
 
 	// Rate Limit
 	ErrRateLimited = Define(KindRateLimited, "RATE_LIMITED", "rate limit exceeded")
+
+	// Unavailable — a dependency failed, not us. Kept apart from ErrInternal so
+	// "someone else is down" and "we have a bug" don't share an alarm.
+	ErrUnavailable = Define(KindUnavailable, "SERVICE_UNAVAILABLE", "service temporarily unavailable")
 )

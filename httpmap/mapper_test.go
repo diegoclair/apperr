@@ -143,6 +143,7 @@ func TestStatusFromKind(t *testing.T) {
 		{apperr.KindConflict, http.StatusConflict},
 		{apperr.KindRateLimited, http.StatusTooManyRequests},
 		{apperr.KindInternal, http.StatusInternalServerError},
+		{apperr.KindUnavailable, http.StatusServiceUnavailable},
 		{apperr.Kind(99), http.StatusInternalServerError}, // unmapped
 	}
 

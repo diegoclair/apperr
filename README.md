@@ -190,6 +190,7 @@ httpmap/ (sub-package — maps Kind → HTTP status)
 | `KindConflict` | 409 Conflict |
 | `KindRateLimited` | 429 Too Many Requests |
 | `KindInternal` | 500 Internal Server Error |
+| `KindUnavailable` | 503 Service Unavailable |
 
 ### Built-in Sentinel Errors
 
@@ -212,6 +213,7 @@ Generic errors reusable in any project. For business-specific errors, define you
 | `ErrForbidden` | Authorization | `FORBIDDEN` |
 | `ErrInternal` | Internal | `INTERNAL_ERROR` |
 | `ErrRateLimited` | RateLimited | `RATE_LIMITED` |
+| `ErrUnavailable` | Unavailable | `SERVICE_UNAVAILABLE` |
 
 ## Design Decisions
 

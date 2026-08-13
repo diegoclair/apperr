@@ -18,6 +18,7 @@ var DefaultStatusMap = map[apperr.Kind]int{
 	apperr.KindConflict:       http.StatusConflict,            // 409
 	apperr.KindRateLimited:    http.StatusTooManyRequests,     // 429
 	apperr.KindInternal:       http.StatusInternalServerError, // 500
+	apperr.KindUnavailable:    http.StatusServiceUnavailable,  // 503
 }
 
 // ErrorResponse is the JSON structure returned by REST APIs.
